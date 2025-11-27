@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import {
   type Body_login_login_access_token as AccessToken,
@@ -20,21 +20,58 @@ const useAuth = () => {
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { data: user } = useQuery<UserPublic | null, Error>({
+  
+  const { data: user, isLoading, refetch } = useQuery<UserPublic | null, Error>({
     queryKey: ["currentUser"],
-    // If we have a JWT access token, keep existing flow.
-    // Otherwise try the IIS-injected endpoint /api/v1/me which returns username+role.
     queryFn: async () => {
-      if (isLoggedIn()) {
-        return UsersService.readUserMe()
+      // For Windows Auth, we don't need to send the X-Windows-User header
+      // IIS will inject it automatically. We just need to make the request
+      // and let the backend handle the authentication.
+      
+      // Try Windows authentication first (this will work if IIS sets the header)
+      try {
+        const res = await fetch(`/api/v1/me`, { 
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          }
+        })
+        
+        // If we get a successful response, we're authenticated with Windows Auth
+        if (res.ok) {
+          return await res.json()
+        }
+        
+        // If we get a 401, it means Windows Auth failed, try token-based auth
+        if (res.status === 401 && isLoggedIn()) {
+          return await UsersService.readUserMe()
+        }
+        
+        // For any other status, return null (not authenticated)
+        return null
+      } catch (error) {
+        // Network error or other issue - fallback to token-based auth if token exists
+        if (isLoggedIn()) {
+          try {
+            return await UsersService.readUserMe()
+          } catch (tokenError) {
+            // Both methods failed
+            return null
+          }
+        }
+        return null
       }
-      const res = await fetch(`/api/v1/me`, { credentials: "include" })
-      if (res.status === 401 || res.status === 404) return null
-      if (!res.ok) throw new Error("Could not fetch current user")
-      return (await res.json()) as unknown as UserPublic
     },
-    enabled: true,
+    retry: false, // Don't retry failed attempts automatically
   })
+  
+  // Automatically attempt Windows authentication on app load
+  useEffect(() => {
+    // Only attempt auto-authentication if we don't already have a token
+    if (!isLoggedIn()) {
+      refetch();
+    }
+  }, [refetch]);
 
   const signUpMutation = useMutation({
     mutationFn: (data: UserRegister) =>
@@ -79,6 +116,7 @@ const useAuth = () => {
     logout,
     user,
     error,
+    isLoading,
     resetError: () => setError(null),
   }
 }

@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-router"
 import { type SubmitHandler, useForm } from "react-hook-form"
 import { FiLock, FiMail } from "react-icons/fi"
+import { useEffect } from "react"
 
 import type { Body_login_login_access_token as AccessToken } from "@/client"
 import { Button } from "@/components/ui/button"
@@ -28,7 +29,7 @@ export const Route = createFileRoute("/login")({
 })
 
 function Login() {
-  const { loginMutation, error, resetError } = useAuth()
+  const { loginMutation, error, resetError, user } = useAuth()
   const {
     register,
     handleSubmit,
@@ -41,6 +42,14 @@ function Login() {
       password: "",
     },
   })
+
+  // Redirect to home if user is authenticated (including Windows auth)
+  useEffect(() => {
+    if (user) {
+      // User is authenticated, redirect to home
+      window.location.href = "/";
+    }
+  }, [user]);
 
   const onSubmit: SubmitHandler<AccessToken> = async (data) => {
     if (isSubmitting) return
@@ -113,3 +122,5 @@ function Login() {
     </>
   )
 }
+
+export default Login
