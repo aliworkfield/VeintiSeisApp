@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router"
 import { type SubmitHandler, useForm } from "react-hook-form"
 import { FiLock, FiMail } from "react-icons/fi"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 
 import type { Body_login_login_access_token as AccessToken } from "@/client"
 import { Button } from "@/components/ui/button"
@@ -30,6 +30,7 @@ export const Route = createFileRoute("/login")({
 
 function Login() {
   const { loginMutation, error, resetError, user } = useAuth()
+  const [isWindowsAuthLoading, setIsWindowsAuthLoading] = useState(false)
   const {
     register,
     handleSubmit,
@@ -50,6 +51,32 @@ function Login() {
       window.location.href = "/";
     }
   }, [user]);
+
+  const handleWindowsAuth = async () => {
+    setIsWindowsAuthLoading(true);
+    try {
+      // Try to authenticate with Windows authentication
+      const response = await fetch("/api/v1/login/windows", {
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        }
+      });
+      
+      if (response.ok) {
+        // Windows authentication successful, redirect to home
+        window.location.href = "/";
+      } else {
+        // Windows authentication failed
+        throw new Error("Windows authentication failed");
+      }
+    } catch (err) {
+      console.error("Windows authentication error:", err);
+      // Optionally show an error message
+    } finally {
+      setIsWindowsAuthLoading(false);
+    }
+  };
 
   const onSubmit: SubmitHandler<AccessToken> = async (data) => {
     if (isSubmitting) return
@@ -83,6 +110,15 @@ function Login() {
           alignSelf="center"
           mb={4}
         />
+        <Button 
+          variant="outline" 
+          onClick={handleWindowsAuth} 
+          loading={isWindowsAuthLoading}
+          size="md"
+          mb={4}
+        >
+          Login with Windows Authentication
+        </Button>
         <Field
           invalid={!!errors.username}
           errorText={errors.username?.message || !!error}
