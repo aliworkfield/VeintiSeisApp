@@ -1,40 +1,27 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
+from sqlalchemy.orm import Session
 from datetime import timedelta
+import secrets
+import uuid
+import logging
 
 from app.core.windows_auth import get_windows_user, get_user_details
 from app.core.security import create_access_token
 from app.core.config import settings
 from app import crud
 from app.models import UserCreate
+from app.api.deps import get_db
 from app.core.db import engine
 from sqlmodel import Session as SqlSession
-import secrets
-import logging
-import re
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(prefix="/login", tags=["login"])
 
-def _windows_username_to_email(username: str) -> str:
-    """Convert a Windows username (e.g. DOMAIN\\username) into a safe email-like string.
-    
-    This keeps compatibility with the existing `User.email` EmailStr field in the DB.
-    """
-    # normalize and replace characters that don't belong in an email local-part
-    # If the incoming value already looks like an email, keep it as-is. This makes tests
-    # and deployments flexible (tests often provide email addresses like FIRST_SUPERUSER).
-    if "@" in username:
-        return username
-
-    cleaned = username.replace("\\", "_").replace("/", "_").replace(" ", "_")
-    cleaned = cleaned.strip().lower()
-    return f"{cleaned}@{settings.WINDOWS_EMAIL_DOMAIN}"
-
-@router.get("/windows")
-def login_with_windows(request: Request):
+@router.get("/window")
+def login_window(request: Request):
     """
     Windows login endpoint supporting both native and IIS modes.
     
@@ -42,33 +29,29 @@ def login_with_windows(request: Request):
     """
     username, mode = get_windows_user(request)
     if not username:
-        raise HTTPException(status_code=401, detail="Unable to detect Windows user")
+        raise HTTPException(401, "Unable to detect Windows user")
 
     logger.debug(f"Detected Windows user: {username}, mode: {mode}")
 
-    # Convert Windows username to a valid email
-    email = _windows_username_to_email(username)
-    
     # Get additional user details if available
     user_details = get_user_details(username)
     
     try:
         # Create or get user in database
         with SqlSession(engine) as session:
-            db_user = crud.get_user_by_email(session=session, email=email)
+            db_user = crud.get_user_by_email(session=session, email=f"{username}@local.domain")
             
             if not db_user:
-                logger.debug(f"User {email} not found, creating new user")
-                # For Windows authentication, we don't need a real password
-                # Create a user with a simple placeholder password that meets minimum requirements
-                placeholder_password = "win12345"  # Simple 8-char placeholder
+                logger.debug(f"User {username}@local.domain not found, creating new user")
+                # Create a new user with a random password (at least 8 characters)
+                tmp_password = secrets.token_urlsafe(8)  # This should be at least 8 characters
                 user_in = UserCreate(
-                    email=email,
-                    password=placeholder_password,
+                    email=f"{username}@local.domain",
+                    password=tmp_password,
                     full_name=user_details.get("full_name", username),
                     is_active=True
                 )
-                db_user = crud.create_windows_user(session=session, user_create=user_in)
+                db_user = crud.create_user(session=session, user_create=user_in)
                 logger.debug(f"Created new user with ID: {db_user.id}")
             else:
                 logger.debug(f"Found existing user with ID: {db_user.id}")
@@ -81,9 +64,11 @@ def login_with_windows(request: Request):
             logger.debug(f"Created JWT token for user ID: {db_user.id}")
         
         return {
+            "windows_user": username,
+            "auth_mode": mode,
             "token": token,
             "user": {
-                "id": db_user.id,  # This is now an int, not a string
+                "id": str(db_user.id),
                 "email": db_user.email,
                 "full_name": db_user.full_name,
                 "is_active": db_user.is_active,

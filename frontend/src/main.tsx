@@ -7,7 +7,10 @@ import { routeTree } from "./routeTree.gen"
 import { ApiError, OpenAPI } from "./client"
 import { CustomProvider } from "./components/ui/provider"
 
-OpenAPI.BASE = import.meta.env.VITE_API_URL
+// Use empty base since the SDK already includes /api in the paths
+OpenAPI.BASE = ""
+
+// Ensure we always get the latest token from localStorage
 OpenAPI.TOKEN = async () => {
   return localStorage.getItem("access_token") || ""
 }

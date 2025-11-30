@@ -11,6 +11,7 @@ import {
   UsersService,
 } from "@/client"
 import { handleError } from "@/utils"
+import useCustomToast from "./useCustomToast"
 
 const isLoggedIn = () => {
   return localStorage.getItem("access_token") !== null
@@ -20,6 +21,7 @@ const useAuth = () => {
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { showErrorToast } = useCustomToast()
   
   const { data: user, isLoading, refetch } = useQuery<UserPublic | null, Error>({
     queryKey: ["currentUser"],
@@ -28,9 +30,18 @@ const useAuth = () => {
       // IIS will inject it automatically. We just need to make the request
       // and let the backend handle the authentication.
       
-      // Try Windows authentication first (this will work if IIS sets the header)
+      // First, try to get user info with existing token if available
+      if (isLoggedIn()) {
+        try {
+          return await UsersService.readUserMe()
+        } catch (error) {
+          // If token-based auth fails, continue to Windows auth check
+        }
+      }
+      
+      // Try Windows authentication by calling the Windows login endpoint
       try {
-        const res = await fetch(`/api/v1/me`, { 
+        const res = await fetch(`/api/v1/login/windows`, { 
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
@@ -39,26 +50,16 @@ const useAuth = () => {
         
         // If we get a successful response, we're authenticated with Windows Auth
         if (res.ok) {
-          return await res.json()
-        }
-        
-        // If we get a 401, it means Windows Auth failed, try token-based auth
-        if (res.status === 401 && isLoggedIn()) {
-          return await UsersService.readUserMe()
+          const data = await res.json()
+          // Store the JWT token we received
+          localStorage.setItem("access_token", data.token)
+          return data.user
         }
         
         // For any other status, return null (not authenticated)
         return null
       } catch (error) {
-        // Network error or other issue - fallback to token-based auth if token exists
-        if (isLoggedIn()) {
-          try {
-            return await UsersService.readUserMe()
-          } catch (tokenError) {
-            // Both methods failed
-            return null
-          }
-        }
+        // Network error or other issue
         return null
       }
     },
@@ -105,6 +106,36 @@ const useAuth = () => {
     },
   })
 
+  const loginWithWindows = async () => {
+    try {
+      const response = await fetch("/api/v1/login/windows", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include"
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Store the JWT token
+        localStorage.setItem("access_token", data.token);
+        // Refresh the user data
+        queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+        // Navigate to home
+        navigate({ to: "/" });
+        return { success: true, data };
+      } else {
+        const errorData = await response.json();
+        showErrorToast(errorData.detail || "Windows login failed");
+        return { success: false, error: errorData };
+      }
+    } catch (error: any) {
+      showErrorToast(error.message || "Windows login failed");
+      return { success: false, error };
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem("access_token")
     navigate({ to: "/login" })
@@ -113,6 +144,7 @@ const useAuth = () => {
   return {
     signUpMutation,
     loginMutation,
+    loginWithWindows,
     logout,
     user,
     error,

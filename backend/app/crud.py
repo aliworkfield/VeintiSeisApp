@@ -6,7 +6,6 @@ from sqlmodel import Session, select
 from app.core.security import get_password_hash, verify_password
 from app.models import Item, ItemCreate, User, UserCreate, UserUpdate
 
-
 def create_user(*, session: Session, user_create: UserCreate) -> User:
     db_obj = User.model_validate(
         user_create, update={"hashed_password": get_password_hash(user_create.password)}
@@ -16,6 +15,22 @@ def create_user(*, session: Session, user_create: UserCreate) -> User:
     session.refresh(db_obj)
     return db_obj
 
+def create_windows_user(*, session: Session, user_create: UserCreate) -> User:
+    """Create a user for Windows authentication without hashing the password.
+    
+    For Windows-authenticated users, we don't need to hash passwords since authentication
+    is handled by Windows. We still need to provide a password to satisfy the model
+    requirements, but it won't be used for authentication.
+    """
+    # Create a simple placeholder hashed password
+    placeholder_hash = "$2b$12$CCCCCCCCCCCCCCCCCCCCC.E5YPO9kmyZVxF2pUU58uVz8I70MuB.U6"  # bcrypt hash of "placeholder"
+    db_obj = User.model_validate(
+        user_create, update={"hashed_password": placeholder_hash}
+    )
+    session.add(db_obj)
+    session.commit()
+    session.refresh(db_obj)
+    return db_obj
 
 def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
     user_data = user_in.model_dump(exclude_unset=True)
@@ -30,12 +45,10 @@ def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
     session.refresh(db_user)
     return db_user
 
-
 def get_user_by_email(*, session: Session, email: str) -> User | None:
     statement = select(User).where(User.email == email)
     session_user = session.exec(statement).first()
     return session_user
-
 
 def authenticate(*, session: Session, email: str, password: str) -> User | None:
     db_user = get_user_by_email(session=session, email=email)
@@ -45,8 +58,7 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
         return None
     return db_user
 
-
-def create_item(*, session: Session, item_in: ItemCreate, owner_id: uuid.UUID) -> Item:
+def create_item(*, session: Session, item_in: ItemCreate, owner_id: int) -> Item:
     db_item = Item.model_validate(item_in, update={"owner_id": owner_id})
     session.add(db_item)
     session.commit()

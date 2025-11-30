@@ -29,7 +29,7 @@ export const Route = createFileRoute("/login")({
 })
 
 function Login() {
-  const { loginMutation, error, resetError, user } = useAuth()
+  const { loginMutation, loginWithWindows, error, resetError, user } = useAuth()
   const [isWindowsAuthLoading, setIsWindowsAuthLoading] = useState(false)
   const {
     register,
@@ -55,24 +55,13 @@ function Login() {
   const handleWindowsAuth = async () => {
     setIsWindowsAuthLoading(true);
     try {
-      // Try to authenticate with Windows authentication
-      const response = await fetch("/api/v1/login/windows", {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        }
-      });
-      
-      if (response.ok) {
-        // Windows authentication successful, redirect to home
-        window.location.href = "/";
-      } else {
-        // Windows authentication failed
-        throw new Error("Windows authentication failed");
+      // Use the loginWithWindows function from the useAuth hook
+      const result = await loginWithWindows();
+      if (!result.success) {
+        console.error("Windows authentication error:", result.error);
       }
     } catch (err) {
       console.error("Windows authentication error:", err);
-      // Optionally show an error message
     } finally {
       setIsWindowsAuthLoading(false);
     }

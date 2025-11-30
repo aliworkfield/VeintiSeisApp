@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 
 from app.api.deps import CurrentUser
-from app.core.security.windows_user import get_windows_user
+from app.core.windows_user import get_windows_user
 
 router = APIRouter()
 

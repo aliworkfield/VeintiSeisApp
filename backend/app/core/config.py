@@ -59,15 +59,20 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
-        return MultiHostUrl.build(
-            scheme="postgresql+psycopg",
-            username=self.POSTGRES_USER,
-            password=self.POSTGRES_PASSWORD,
-            host=self.POSTGRES_SERVER,
-            port=self.POSTGRES_PORT,
-            path=self.POSTGRES_DB,
-        )
+    def SQLALCHEMY_DATABASE_URI(self) -> str:
+        if self.ENVIRONMENT == "local":
+            # Use SQLite for local development
+            return "sqlite:///./test.db"
+        else:
+            # Use PostgreSQL for staging/production
+            return str(MultiHostUrl.build(
+                scheme="postgresql+psycopg",
+                username=self.POSTGRES_USER,
+                password=self.POSTGRES_PASSWORD,
+                host=self.POSTGRES_SERVER,
+                port=self.POSTGRES_PORT,
+                path=self.POSTGRES_DB,
+            ))
 
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
@@ -97,7 +102,7 @@ class Settings(BaseSettings):
     # Comma-separated list or array of windows users (exact match) to treat as admins
     WINDOWS_ADMIN_USERS: Annotated[list[str] | str, BeforeValidator(parse_cors)] = []
     # Domain part to append when converting Windows usernames into a valid User.email
-    WINDOWS_EMAIL_DOMAIN: str = "windows.local"
+    WINDOWS_EMAIL_DOMAIN: str = "windows.localdomain"
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":

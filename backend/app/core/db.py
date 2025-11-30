@@ -1,11 +1,32 @@
 from sqlmodel import Session, create_engine, select
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
 from app import crud
 from app.core.config import settings
-from app.models import User, UserCreate
+from app.models import User, UserCreate, Item
 
-engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
+# Create engine with connect_args for SQLite
+if "sqlite" in str(settings.SQLALCHEMY_DATABASE_URI):
+    engine = create_engine(
+        str(settings.SQLALCHEMY_DATABASE_URI),
+        echo=True,
+        connect_args={"check_same_thread": False}
+    )
+else:
+    engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
+# SQLite specific configuration
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    if "sqlite" in str(settings.SQLALCHEMY_DATABASE_URI):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+# Create tables
+from sqlmodel import SQLModel
+SQLModel.metadata.create_all(engine)
 
 # make sure all SQLModel models are imported (app.models) before initializing DB
 # otherwise, SQLModel might fail to initialize relationships properly
