@@ -4,7 +4,6 @@ from datetime import datetime
 
 from pydantic import EmailStr
 from sqlmodel import Field, Relationship, SQLModel
-from sqlalchemy import JSON
 
 # Define the UpdatePassword model
 class UpdatePassword(SQLModel):
@@ -47,65 +46,3 @@ class UserOld(UserBaseOld, table=True):
 # Properties to return via API, id is always required
 class UserOutOld(UserBaseOld):
     id: int
-
-# Shared properties
-class ItemBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
-
-# Properties to receive on item creation
-class ItemCreate(ItemBase):
-    pass
-
-# Properties to receive on item update
-class ItemUpdate(ItemBase):
-    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
-
-# Database model, database table inferred from class name
-class Item(ItemBase, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    owner_id: int | None = Field(default=None, foreign_key="user.id", nullable=False)
-    owner: "UserOld" = Relationship(back_populates="items")
-
-# Properties to return via API, id is always required
-class ItemOut(ItemBase):
-    id: int
-    owner_id: int
-
-# Generic message
-class Message(SQLModel):
-    message: str
-
-# JSON payload containing access token
-class Token(SQLModel):
-    access_token: str
-    token_type: str = "bearer"
-
-# Contents of access token
-class TokenPayload(SQLModel):
-    sub: int | None = None
-
-class NewPassword(SQLModel):
-    token: str
-    new_password: str = Field(min_length=8, max_length=40)
-
-# Export models for backward compatibility
-__all__ = [
-    "UpdatePassword",
-    "UserBaseOld",
-    "UserCreateOld",
-    "UserRegister",
-    "UserUpdateOld",
-    "UserUpdateMe",
-    "UserOld",
-    "UserOutOld",
-    "ItemBase",
-    "ItemCreate",
-    "ItemUpdate",
-    "Item",
-    "ItemOut",
-    "Message",
-    "Token",
-    "TokenPayload",
-    "NewPassword"
-]

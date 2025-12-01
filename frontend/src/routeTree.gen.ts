@@ -19,7 +19,14 @@ import { Route as LayoutImport } from './routes/_layout'
 import { Route as LayoutIndexImport } from './routes/_layout/index'
 import { Route as LayoutSettingsImport } from './routes/_layout/settings'
 import { Route as LayoutItemsImport } from './routes/_layout/items'
+import { Route as LayoutCouponsImport } from './routes/_layout/coupons'
 import { Route as LayoutAdminImport } from './routes/_layout/admin'
+import { Route as LayoutCouponsUploadImport } from './routes/_layout/coupons.upload'
+import { Route as LayoutCouponsUnassignedImport } from './routes/_layout/coupons.unassigned'
+import { Route as LayoutCouponsMeImport } from './routes/_layout/coupons.me'
+import { Route as LayoutCouponsAssignImport } from './routes/_layout/coupons.assign'
+import { Route as LayoutCouponsAllImport } from './routes/_layout/coupons.all'
+import { Route as LayoutAdminCouponsImport } from './routes/_layout/admin.coupons'
 
 // Create/Update Routes
 
@@ -63,9 +70,44 @@ const LayoutItemsRoute = LayoutItemsImport.update({
   getParentRoute: () => LayoutRoute,
 } as any)
 
+const LayoutCouponsRoute = LayoutCouponsImport.update({
+  path: '/coupons',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
 const LayoutAdminRoute = LayoutAdminImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
+} as any)
+
+const LayoutCouponsUploadRoute = LayoutCouponsUploadImport.update({
+  path: '/upload',
+  getParentRoute: () => LayoutCouponsRoute,
+} as any)
+
+const LayoutCouponsUnassignedRoute = LayoutCouponsUnassignedImport.update({
+  path: '/unassigned',
+  getParentRoute: () => LayoutCouponsRoute,
+} as any)
+
+const LayoutCouponsMeRoute = LayoutCouponsMeImport.update({
+  path: '/me',
+  getParentRoute: () => LayoutCouponsRoute,
+} as any)
+
+const LayoutCouponsAssignRoute = LayoutCouponsAssignImport.update({
+  path: '/assign',
+  getParentRoute: () => LayoutCouponsRoute,
+} as any)
+
+const LayoutCouponsAllRoute = LayoutCouponsAllImport.update({
+  path: '/all',
+  getParentRoute: () => LayoutCouponsRoute,
+} as any)
+
+const LayoutAdminCouponsRoute = LayoutAdminCouponsImport.update({
+  path: '/coupons',
+  getParentRoute: () => LayoutAdminRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -96,6 +138,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/coupons': {
+      preLoaderRoute: typeof LayoutCouponsImport
+      parentRoute: typeof LayoutImport
+    }
     '/_layout/items': {
       preLoaderRoute: typeof LayoutItemsImport
       parentRoute: typeof LayoutImport
@@ -108,6 +154,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/admin/coupons': {
+      preLoaderRoute: typeof LayoutAdminCouponsImport
+      parentRoute: typeof LayoutAdminImport
+    }
+    '/_layout/coupons/all': {
+      preLoaderRoute: typeof LayoutCouponsAllImport
+      parentRoute: typeof LayoutCouponsImport
+    }
+    '/_layout/coupons/assign': {
+      preLoaderRoute: typeof LayoutCouponsAssignImport
+      parentRoute: typeof LayoutCouponsImport
+    }
+    '/_layout/coupons/me': {
+      preLoaderRoute: typeof LayoutCouponsMeImport
+      parentRoute: typeof LayoutCouponsImport
+    }
+    '/_layout/coupons/unassigned': {
+      preLoaderRoute: typeof LayoutCouponsUnassignedImport
+      parentRoute: typeof LayoutCouponsImport
+    }
+    '/_layout/coupons/upload': {
+      preLoaderRoute: typeof LayoutCouponsUploadImport
+      parentRoute: typeof LayoutCouponsImport
+    }
   }
 }
 
@@ -115,7 +185,14 @@ declare module '@tanstack/react-router' {
 
 export const routeTree = rootRoute.addChildren([
   LayoutRoute.addChildren([
-    LayoutAdminRoute,
+    LayoutAdminRoute.addChildren([LayoutAdminCouponsRoute]),
+    LayoutCouponsRoute.addChildren([
+      LayoutCouponsAllRoute,
+      LayoutCouponsAssignRoute,
+      LayoutCouponsMeRoute,
+      LayoutCouponsUnassignedRoute,
+      LayoutCouponsUploadRoute,
+    ]),
     LayoutItemsRoute,
     LayoutSettingsRoute,
     LayoutIndexRoute,

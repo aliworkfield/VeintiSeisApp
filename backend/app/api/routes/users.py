@@ -15,16 +15,15 @@ from app.core.security import get_password_hash, verify_password
 from app.models import (
     Item,
     Message,
-    UpdatePassword,
-    User,
-    UserCreate,
-    UserPublic,
+    UserOld,
+    UserCreateOld,
+    UserOutOld,
     UserRegister,
-    UsersPublic,
-    UserUpdate,
+    UserUpdateOld,
     UserUpdateMe,
 )
-from app.utils import generate_new_account_email, send_email
+from app.models.user_old import UpdatePassword
+import app.utils
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -32,26 +31,23 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get(
     "/",
     dependencies=[Depends(get_current_active_superuser)],
-    response_model=UsersPublic,
+    response_model=list[UserOutOld],
 )
 def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
     """
     Retrieve users.
     """
 
-    count_statement = select(func.count()).select_from(User)
-    count = session.exec(count_statement).one()
-
-    statement = select(User).offset(skip).limit(limit)
+    statement = select(UserOld).offset(skip).limit(limit)
     users = session.exec(statement).all()
 
-    return UsersPublic(data=users, count=count)
+    return users
 
 
 @router.post(
-    "/", dependencies=[Depends(get_current_active_superuser)], response_model=UserPublic
+    "/", dependencies=[Depends(get_current_active_superuser)], response_model=UserOutOld
 )
-def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
+def create_user(*, session: SessionDep, user_in: UserCreateOld) -> Any:
     """
     Create new user.
     """
@@ -64,10 +60,10 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
 
     user = crud.create_user(session=session, user_create=user_in)
     if settings.emails_enabled and user_in.email:
-        email_data = generate_new_account_email(
+        email_data = app.utils.generate_new_account_email(
             email_to=user_in.email, username=user_in.email, password=user_in.password
         )
-        send_email(
+        app.utils.send_email(
             email_to=user_in.email,
             subject=email_data.subject,
             html_content=email_data.html_content,
@@ -75,7 +71,7 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     return user
 
 
-@router.patch("/me", response_model=UserPublic)
+@router.patch("/me", response_model=UserOutOld)
 def update_user_me(
     *, session: SessionDep, user_in: UserUpdateMe, current_user: CurrentUser
 ) -> Any:
@@ -117,7 +113,7 @@ def update_password_me(
     return Message(message="Password updated successfully")
 
 
-@router.get("/me", response_model=UserPublic)
+@router.get("/me", response_model=UserOutOld)
 def read_user_me(current_user: CurrentUser) -> Any:
     """
     Get current user.
@@ -139,7 +135,7 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     return Message(message="User deleted successfully")
 
 
-@router.post("/signup", response_model=UserPublic)
+@router.post("/signup", response_model=UserOutOld)
 def register_user(session: SessionDep, user_in: UserRegister) -> Any:
     """
     Create new user without the need to be logged in.
@@ -150,19 +146,19 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
             status_code=400,
             detail="The user with this email already exists in the system",
         )
-    user_create = UserCreate.model_validate(user_in)
+    user_create = UserCreateOld.model_validate(user_in)
     user = crud.create_user(session=session, user_create=user_create)
     return user
 
 
-@router.get("/{user_id}", response_model=UserPublic)
+@router.get("/{user_id}", response_model=UserOutOld)
 def read_user_by_id(
-    user_id: uuid.UUID, session: SessionDep, current_user: CurrentUser
+    user_id: int, session: SessionDep, current_user: CurrentUser
 ) -> Any:
     """
     Get a specific user by id.
     """
-    user = session.get(User, user_id)
+    user = session.get(UserOld, user_id)
     if user == current_user:
         return user
     if not current_user.is_superuser:
@@ -176,19 +172,19 @@ def read_user_by_id(
 @router.patch(
     "/{user_id}",
     dependencies=[Depends(get_current_active_superuser)],
-    response_model=UserPublic,
+    response_model=UserOutOld,
 )
 def update_user(
     *,
     session: SessionDep,
-    user_id: uuid.UUID,
-    user_in: UserUpdate,
+    user_id: int,
+    user_in: UserUpdateOld,
 ) -> Any:
     """
     Update a user.
     """
 
-    db_user = session.get(User, user_id)
+    db_user = session.get(UserOld, user_id)
     if not db_user:
         raise HTTPException(
             status_code=404,
@@ -207,12 +203,12 @@ def update_user(
 
 @router.delete("/{user_id}", dependencies=[Depends(get_current_active_superuser)])
 def delete_user(
-    session: SessionDep, current_user: CurrentUser, user_id: uuid.UUID
+    session: SessionDep, current_user: CurrentUser, user_id: int
 ) -> Message:
     """
     Delete a user.
     """
-    user = session.get(User, user_id)
+    user = session.get(UserOld, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if user == current_user:

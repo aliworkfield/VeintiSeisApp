@@ -6,7 +6,7 @@ from fastapi import Depends, Header, HTTPException, status
 from sqlmodel import Session
 from app.core.config import settings
 from app.core.db import engine
-from app.models import User, UserCreate
+from app.models import UserOld as User, UserCreateOld as UserCreate
 from app import crud
 from app.core.security import verify_access_token
 

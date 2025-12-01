@@ -1,14 +1,16 @@
 import { Box, Flex, Icon, Text } from "@chakra-ui/react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Link as RouterLink } from "@tanstack/react-router"
-import { FiBriefcase, FiHome, FiSettings, FiUsers } from "react-icons/fi"
+import { FiBriefcase, FiHome, FiSettings, FiUsers, FiTag } from "react-icons/fi"
 import type { IconType } from "react-icons/lib"
 
 import type { UserPublic } from "@/client"
+import useAuth from "@/hooks/useAuth"
 
 const items = [
   { icon: FiHome, title: "Dashboard", path: "/" },
   { icon: FiBriefcase, title: "Items", path: "/items" },
+  { icon: FiTag, title: "Coupons", path: "/coupons/me" },
   { icon: FiSettings, title: "User Settings", path: "/settings" },
 ]
 
@@ -24,11 +26,38 @@ interface Item {
 
 const SidebarItems = ({ onClose }: SidebarItemsProps) => {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
   const currentUser = queryClient.getQueryData<UserPublic>(["currentUser"])
 
-  const finalItems: Item[] = currentUser?.is_superuser
-    ? [...items, { icon: FiUsers, title: "Admin", path: "/admin" }]
-    : items
+  // Add coupon management links based on user role
+  const couponItems = []
+  
+  // All users can access their own coupons
+  couponItems.push({ icon: FiTag, title: "My Coupons", path: "/coupons/me" })
+  
+  // Managers and admins can access additional coupon features
+  if (user?.roles.includes("coupon_manager") || user?.roles.includes("coupon_admin")) {
+    couponItems.push({ icon: FiTag, title: "All Coupons", path: "/coupons/all" })
+    couponItems.push({ icon: FiTag, title: "Bulk Upload", path: "/coupons/upload" })
+    couponItems.push({ icon: FiTag, title: "Campaign Assignment", path: "/coupons/assign" })
+  }
+  
+  // Only admins can access the admin panel
+  if (user?.roles.includes("coupon_admin")) {
+    couponItems.push({ icon: FiUsers, title: "Coupon Admin", path: "/admin/coupons" })
+  }
+
+  const finalItems: Item[] = [
+    { icon: FiHome, title: "Dashboard", path: "/" },
+    { icon: FiBriefcase, title: "Items", path: "/items" },
+    ...couponItems,
+    { icon: FiSettings, title: "User Settings", path: "/settings" },
+  ]
+
+  // Add admin link for superusers
+  if (currentUser?.is_superuser) {
+    finalItems.push({ icon: FiUsers, title: "Admin", path: "/admin" })
+  }
 
   const listItems = finalItems.map(({ icon, title, path }) => (
     <RouterLink key={title} to={path} onClick={onClose}>

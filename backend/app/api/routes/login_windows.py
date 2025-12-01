@@ -5,7 +5,7 @@ from app.core.windows_auth import get_windows_user, get_user_details
 from app.core.security import create_access_token
 from app.core.config import settings
 from app import crud
-from app.models import UserCreate
+from app.models import UserCreateOld as UserCreate
 from app.core.db import engine
 from sqlmodel import Session as SqlSession
 import secrets

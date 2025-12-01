@@ -9,7 +9,7 @@ from app.core.windows_auth import get_windows_user, get_user_details
 from app.core.security import create_access_token
 from app.core.config import settings
 from app import crud
-from app.models import UserCreate
+from app.models import UserCreateOld as UserCreate
 from app.api.deps import get_db
 from app.core.db import engine
 from sqlmodel import Session as SqlSession
@@ -39,14 +39,14 @@ def login_window(request: Request):
     try:
         # Create or get user in database
         with SqlSession(engine) as session:
-            db_user = crud.get_user_by_email(session=session, email=f"{username}@local.domain")
+            db_user = crud.get_user_by_email(session=session, email=f"{username}@windows.localdomain")
             
             if not db_user:
-                logger.debug(f"User {username}@local.domain not found, creating new user")
+                logger.debug(f"User {username}@windows.localdomain not found, creating new user")
                 # Create a new user with a random password (at least 8 characters)
                 tmp_password = secrets.token_urlsafe(8)  # This should be at least 8 characters
                 user_in = UserCreate(
-                    email=f"{username}@local.domain",
+                    email=f"{username}@windows.localdomain",
                     password=tmp_password,
                     full_name=user_details.get("full_name", username),
                     is_active=True

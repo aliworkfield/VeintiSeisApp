@@ -13,6 +13,15 @@ import {
 import { handleError } from "@/utils"
 import useCustomToast from "./useCustomToast"
 
+// Define the new user type for coupon system
+interface CouponUser {
+  id: number;
+  username: string;
+  roles: string[];
+  attributes: Record<string, any>;
+  created_at: string;
+}
+
 const isLoggedIn = () => {
   return localStorage.getItem("access_token") !== null
 }
@@ -23,7 +32,7 @@ const useAuth = () => {
   const queryClient = useQueryClient()
   const { showErrorToast } = useCustomToast()
   
-  const { data: user, isLoading, refetch } = useQuery<UserPublic | null, Error>({
+  const { data: user, isLoading, refetch } = useQuery<CouponUser | null, Error>({
     queryKey: ["currentUser"],
     queryFn: async () => {
       // For Windows Auth, we don't need to send the X-Windows-User header
@@ -33,7 +42,19 @@ const useAuth = () => {
       // First, try to get user info with existing token if available
       if (isLoggedIn()) {
         try {
-          return await UsersService.readUserMe()
+          // Try to get coupon user info
+          const res = await fetch(`/api/v1/coupon-users/me`, { 
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${localStorage.getItem("access_token")}`
+            }
+          })
+          
+          if (res.ok) {
+            const userData = await res.json();
+            return userData as CouponUser;
+          }
         } catch (error) {
           // If token-based auth fails, continue to Windows auth check
         }
@@ -122,8 +143,8 @@ const useAuth = () => {
         localStorage.setItem("access_token", data.token);
         // Refresh the user data
         queryClient.invalidateQueries({ queryKey: ["currentUser"] });
-        // Navigate to home
-        navigate({ to: "/" });
+        // Navigate to coupons dashboard
+        navigate({ to: "/coupons/me" });
         return { success: true, data };
       } else {
         const errorData = await response.json();
@@ -150,6 +171,10 @@ const useAuth = () => {
     error,
     isLoading,
     resetError: () => setError(null),
+    // Helper functions to check user roles
+    isCouponAdmin: user?.roles.includes("coupon_admin"),
+    isCouponManager: user?.roles.includes("coupon_manager"),
+    isRegularUser: user?.roles.includes("user"),
   }
 }
 

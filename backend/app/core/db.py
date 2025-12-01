@@ -4,7 +4,7 @@ from sqlalchemy.engine import Engine
 
 from app import crud
 from app.core.config import settings
-from app.models import User, UserCreate, Item
+from app.models import UserOld, UserCreateOld, Item
 
 # Create engine with connect_args for SQLite
 if "sqlite" in str(settings.SQLALCHEMY_DATABASE_URI):
@@ -43,10 +43,10 @@ def init_db(session: Session) -> None:
     # SQLModel.metadata.create_all(engine)
 
     user = session.exec(
-        select(User).where(User.email == settings.FIRST_SUPERUSER)
+        select(UserOld).where(UserOld.email == settings.FIRST_SUPERUSER)
     ).first()
     if not user:
-        user_in = UserCreate(
+        user_in = UserCreateOld(
             email=settings.FIRST_SUPERUSER,
             password=settings.FIRST_SUPERUSER_PASSWORD,
             is_superuser=True,
