@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 from app.core.security import get_password_hash, verify_password
 # Import all models directly from their source files
 from app.models.item import Item, ItemCreate
-from app.models.user import User, UserCreate, UserUpdate
+from app.models.user import User, UserCreate
 from app.models.user_old import UserOld, UserCreateOld, UserUpdateOld, UpdatePassword
 from app.models.other import Message, Token, TokenPayload, NewPassword
 

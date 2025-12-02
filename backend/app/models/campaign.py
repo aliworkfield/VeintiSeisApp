@@ -2,8 +2,8 @@ from typing import Optional, List
 from sqlmodel import Field, Relationship, SQLModel
 from datetime import datetime
 
-# Import models for forward reference resolution
-from app.models.coupon import Coupon
+# Remove direct import of Coupon to avoid circular import
+# from app.models.coupon import Coupon
 
 class CampaignBase(SQLModel):
     name: str = Field(max_length=255)
@@ -13,7 +13,8 @@ class CampaignBase(SQLModel):
 
 class Campaign(CampaignBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    coupons: List[Coupon] = Relationship(back_populates="campaign")
+    # Use string reference to avoid circular import
+    coupons: List["Coupon"] = Relationship(back_populates="campaign")
 
 class CampaignCreate(CampaignBase):
     pass

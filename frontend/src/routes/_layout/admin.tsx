@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { z } from "zod"
 
-import { type UserPublic, UsersService } from "@/client"
+import { type UserOutOld, UsersService } from "@/client"
 import AddUser from "@/components/Admin/AddUser"
 import { UserActionsMenu } from "@/components/Common/UserActionsMenu"
 import PendingUsers from "@/components/Pending/PendingUsers"
@@ -35,7 +35,7 @@ export const Route = createFileRoute("/_layout/admin")({
 
 function UsersTable() {
   const queryClient = useQueryClient()
-  const currentUser = queryClient.getQueryData<UserPublic>(["currentUser"])
+  const currentUser = queryClient.getQueryData<UserOutOld>(["currentUser"])
   const navigate = useNavigate({ from: Route.fullPath })
   const { page } = Route.useSearch()
 
@@ -49,8 +49,9 @@ function UsersTable() {
       search: (prev: { [key: string]: string }) => ({ ...prev, page }),
     })
 
-  const users = data?.data.slice(0, PER_PAGE) ?? []
-  const count = data?.count ?? 0
+  // Fix the data access - UsersService.readUsers returns an array directly, not an object with data/count
+  const users = data?.slice(0, PER_PAGE) ?? []
+  const count = data?.length ?? 0
 
   if (isLoading) {
     return <PendingUsers />
@@ -61,7 +62,7 @@ function UsersTable() {
       <Table.Root size={{ base: "sm", md: "md" }}>
         <Table.Header>
           <Table.Row>
-            <Table.ColumnHeader w="20%">Full name</Table.ColumnHeader>
+            <Table.ColumnHeader w="20%">Full Name</Table.ColumnHeader>
             <Table.ColumnHeader w="25%">Email</Table.ColumnHeader>
             <Table.ColumnHeader w="15%">Role</Table.ColumnHeader>
             <Table.ColumnHeader w="20%">Status</Table.ColumnHeader>

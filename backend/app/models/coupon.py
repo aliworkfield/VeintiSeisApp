@@ -5,7 +5,8 @@ from datetime import datetime
 
 # Import models for forward reference resolution
 from app.models.user import User
-from app.models.campaign import Campaign
+# Remove direct import of Campaign to avoid circular import
+# from app.models.campaign import Campaign
 
 class CouponBase(SQLModel):
     code: str = Field(unique=True, index=True, max_length=255)
@@ -21,7 +22,8 @@ class CouponBase(SQLModel):
 class Coupon(CouponBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     assigned_user: Optional[User] = Relationship(back_populates="coupons")
-    campaign: Optional[Campaign] = Relationship(back_populates="coupons")
+    # Use string reference to avoid circular import
+    campaign: Optional["Campaign"] = Relationship(back_populates="coupons")
 
 class CouponCreate(CouponBase):
     pass

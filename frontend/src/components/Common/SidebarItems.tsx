@@ -4,19 +4,8 @@ import { Link as RouterLink } from "@tanstack/react-router"
 import { FiBriefcase, FiHome, FiSettings, FiUsers, FiTag } from "react-icons/fi"
 import type { IconType } from "react-icons/lib"
 
-import type { UserPublic } from "@/client"
+import type { UserOutOld } from "@/client"
 import useAuth from "@/hooks/useAuth"
-
-const items = [
-  { icon: FiHome, title: "Dashboard", path: "/" },
-  { icon: FiBriefcase, title: "Items", path: "/items" },
-  { icon: FiTag, title: "Coupons", path: "/coupons/me" },
-  { icon: FiSettings, title: "User Settings", path: "/settings" },
-]
-
-interface SidebarItemsProps {
-  onClose?: () => void
-}
 
 interface Item {
   icon: IconType
@@ -24,10 +13,10 @@ interface Item {
   path: string
 }
 
-const SidebarItems = ({ onClose }: SidebarItemsProps) => {
+const SidebarItems = ({ onClose }: { onClose?: () => void }) => {
   const queryClient = useQueryClient()
   const { user } = useAuth()
-  const currentUser = queryClient.getQueryData<UserPublic>(["currentUser"])
+  const currentUser = queryClient.getQueryData<UserOutOld>(["currentUser"])
 
   // Add coupon management links based on user role
   const couponItems = []

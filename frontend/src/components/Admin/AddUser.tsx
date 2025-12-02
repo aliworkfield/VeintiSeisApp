@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Controller, type SubmitHandler, useForm } from "react-hook-form"
 
-import { type UserCreate, UsersService } from "@/client"
+import { type UserCreateOld, UsersService } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
 import useCustomToast from "@/hooks/useCustomToast"
 import { emailPattern, handleError } from "@/utils"
@@ -28,7 +28,7 @@ import {
 } from "../ui/dialog"
 import { Field } from "../ui/field"
 
-interface UserCreateForm extends UserCreate {
+interface UserCreateForm extends UserCreateOld {
   confirm_password: string
 }
 
@@ -57,7 +57,7 @@ const AddUser = () => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: UserCreate) =>
+    mutationFn: (data: UserCreateOld) =>
       UsersService.createUser({ requestBody: data }),
     onSuccess: () => {
       showSuccessToast("User created successfully.")
@@ -73,7 +73,9 @@ const AddUser = () => {
   })
 
   const onSubmit: SubmitHandler<UserCreateForm> = (data) => {
-    mutation.mutate(data)
+    // Remove confirm_password from data before sending to API
+    const { confirm_password, ...userData } = data
+    mutation.mutate(userData)
   }
 
   return (

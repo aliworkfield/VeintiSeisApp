@@ -12,12 +12,15 @@ router = APIRouter(prefix="/coupon-users", tags=["coupon-users"])
 @router.get("/", response_model=List[UserRead])
 def read_users(
     *, 
-    session: SessionDep, 
-    current_user: CouponUser = Depends(require_coupon_admin)
+    current_user: CouponUser,
+    session: SessionDep
 ) -> Any:
     """
     Retrieve all coupon users (admin only).
     """
+    # Check if user has required role
+    require_coupon_admin(current_user)
+    
     statement = select(User)
     users = session.exec(statement).all()
     return users
@@ -32,13 +35,16 @@ def read_user_me(current_user: CouponUser) -> Any:
 @router.post("/", response_model=UserRead)
 def create_user(
     *, 
+    current_user: CouponUser,
     session: SessionDep, 
-    user_in: UserCreate,
-    current_user: CouponUser = Depends(require_coupon_admin)
+    user_in: UserCreate
 ) -> Any:
     """
     Create new coupon user (admin only).
     """
+    # Check if user has required role
+    require_coupon_admin(current_user)
+    
     # Check if user already exists
     statement = select(User).where(User.username == user_in.username)
     existing_user = session.exec(statement).first()
@@ -54,14 +60,17 @@ def create_user(
 @router.patch("/{user_id}", response_model=UserRead)
 def update_user(
     *,
+    current_user: CouponUser,
     session: SessionDep,
     user_id: int,
-    user_in: UserUpdate,
-    current_user: CouponUser = Depends(require_coupon_admin)
+    user_in: UserUpdate
 ) -> Any:
     """
     Update a coupon user (admin only).
     """
+    # Check if user has required role
+    require_coupon_admin(current_user)
+    
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(
@@ -82,13 +91,16 @@ def update_user(
 @router.delete("/{user_id}")
 def delete_user(
     *,
+    current_user: CouponUser,
     session: SessionDep,
-    user_id: int,
-    current_user: CouponUser = Depends(require_coupon_admin)
+    user_id: int
 ) -> Any:
     """
     Delete a coupon user (admin only).
     """
+    # Check if user has required role
+    require_coupon_admin(current_user)
+    
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(

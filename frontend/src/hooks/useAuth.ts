@@ -3,13 +3,12 @@ import { useNavigate } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 
 import {
-  type Body_login_login_access_token as AccessToken,
   type ApiError,
   LoginService,
-  type UserPublic,
   type UserRegister,
   UsersService,
 } from "@/client"
+import { CouponUsersService } from "@/client"
 import { handleError } from "@/utils"
 import useCustomToast from "./useCustomToast"
 
@@ -43,18 +42,10 @@ const useAuth = () => {
       if (isLoggedIn()) {
         try {
           // Try to get coupon user info
-          const res = await fetch(`/api/v1/coupon-users/me`, { 
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${localStorage.getItem("access_token")}`
-            }
-          })
-          
-          if (res.ok) {
-            const userData = await res.json();
-            return userData as CouponUser;
-          }
+          const userData = await CouponUsersService.readUserMe({
+            authorization: `Bearer ${localStorage.getItem("access_token")}`
+          });
+          return userData as CouponUser;
         } catch (error) {
           // If token-based auth fails, continue to Windows auth check
         }
@@ -110,11 +101,9 @@ const useAuth = () => {
     },
   })
 
-  const login = async (data: AccessToken) => {
-    const response = await LoginService.loginAccessToken({
-      formData: data,
-    })
-    localStorage.setItem("access_token", response.access_token)
+  const login = async () => {
+    const response = await LoginService.loginWindow();
+    localStorage.setItem("access_token", response as any)
   }
 
   const loginMutation = useMutation({

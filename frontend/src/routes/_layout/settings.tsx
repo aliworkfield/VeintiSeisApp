@@ -19,8 +19,10 @@ export const Route = createFileRoute("/_layout/settings")({
 })
 
 function UserSettings() {
-  const { user: currentUser } = useAuth()
-  const finalTabs = currentUser?.is_superuser
+  const { user: currentUser, isCouponAdmin } = useAuth()
+  
+  // For coupon users, we'll show all tabs except appearance and danger zone for regular users
+  const finalTabs = isCouponAdmin
     ? tabsConfig.slice(0, 3)
     : tabsConfig
 

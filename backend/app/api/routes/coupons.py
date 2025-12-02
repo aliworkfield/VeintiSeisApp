@@ -1,6 +1,6 @@
-from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlmodel import Session
+from typing import List, Optional
 from app.api.deps_coupon import get_db, CouponUser
 from app.core.roles_coupon import require_coupon_admin, require_coupon_manager, require_user
 from app.services.coupon_service import CouponService
@@ -28,72 +28,79 @@ def read_my_coupons(
 
 @router.get("/unassigned", response_model=List[CouponRead])
 def read_unassigned_coupons(
-    skip: int = 0,
-    limit: int = 100,
-    current_user: CouponUser = Depends(require_coupon_manager),
+    current_user: CouponUser,
     session: Session = Depends(get_db)
 ):
     """
     Get all unassigned coupons (manager/admin only).
     """
+    # Check if user has required role
+    require_coupon_manager(current_user)
+    
     coupon_service = CouponService(session)
-    coupons = coupon_service.get_unassigned_coupons(skip=skip, limit=limit)
+    coupons = coupon_service.get_unassigned_coupons()
     return coupons
 
 @router.get("/available", response_model=List[CouponRead])
 def read_available_coupons(
-    skip: int = 0,
-    limit: int = 100,
-    current_user: CouponUser = Depends(require_coupon_manager),
+    current_user: CouponUser,
     session: Session = Depends(get_db)
 ):
     """
     Get all available coupons (manager/admin only).
     """
+    # Check if user has required role
+    require_coupon_manager(current_user)
+    
     coupon_service = CouponService(session)
-    coupons = coupon_service.get_available_coupons(skip=skip, limit=limit)
+    coupons = coupon_service.get_available_coupons()
     return coupons
 
 @router.get("/all", response_model=List[CouponRead])
 def read_all_coupons(
-    skip: int = 0,
-    limit: int = 100,
-    current_user: CouponUser = Depends(require_coupon_admin),
+    current_user: CouponUser,
     session: Session = Depends(get_db)
 ):
     """
     Get all coupons (admin only).
     """
+    # Check if user has required role
+    require_coupon_admin(current_user)
+    
     coupon_service = CouponService(session)
-    coupons = coupon_service.get_coupons(skip=skip, limit=limit)
+    coupons = coupon_service.get_coupons()
     return coupons
 
 @router.get("/campaign/{campaign_id}", response_model=List[CouponRead])
 def read_campaign_coupons(
     campaign_id: int,
-    skip: int = 0,
-    limit: int = 100,
-    current_user: CouponUser = Depends(require_coupon_manager),
+    current_user: CouponUser,
     session: Session = Depends(get_db)
 ):
     """
     Get all coupons for a specific campaign (manager/admin only).
     """
+    # Check if user has required role
+    require_coupon_manager(current_user)
+    
     coupon_service = CouponService(session)
-    coupons = coupon_service.get_campaign_coupons(campaign_id, skip=skip, limit=limit)
+    coupons = coupon_service.get_campaign_coupons(campaign_id)
     return coupons
 
 @router.post("/upload-excel", response_model=List[CouponRead])
 async def upload_coupons_excel(
-    file: UploadFile = File(...),
-    current_user: CouponUser = Depends(require_coupon_manager),
-    session: Session = Depends(get_db)
+    current_user: CouponUser,
+    session: Session = Depends(get_db),
+    file: UploadFile = File(...)
 ):
     """
     Upload coupons from Excel file (manager/admin only).
     Business Rule: Accept Excel (.xlsx), Accept JSON array, Insert coupons with status unassigned,
     Required columns for Excel: code, campaign_name (auto-create if not exists)
     """
+    # Check if user has required role
+    require_coupon_manager(current_user)
+    
     # Save uploaded file temporarily
     with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp_file:
         tmp_file.write(await file.read())
@@ -118,15 +125,18 @@ async def upload_coupons_excel(
 
 @router.post("/upload-json", response_model=List[CouponRead])
 async def upload_coupons_json(
-    file: UploadFile = File(...),
-    current_user: CouponUser = Depends(require_coupon_manager),
-    session: Session = Depends(get_db)
+    current_user: CouponUser,
+    session: Session = Depends(get_db),
+    file: UploadFile = File(...)
 ):
     """
     Upload coupons from JSON file (manager/admin only).
     Business Rule: Accept Excel (.xlsx), Accept JSON array, Insert coupons with status unassigned,
     Required columns for Excel: code, campaign_name (auto-create if not exists)
     """
+    # Check if user has required role
+    require_coupon_manager(current_user)
+    
     # Save uploaded file temporarily
     with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp_file:
         tmp_file.write(await file.read())
@@ -153,12 +163,15 @@ async def upload_coupons_json(
 def assign_coupon(
     coupon_id: int,
     user_id: int,
-    current_user: CouponUser = Depends(require_coupon_manager),
+    current_user: CouponUser,
     session: Session = Depends(get_db)
 ):
     """
     Assign a coupon to a user (manager/admin only).
     """
+    # Check if user has required role
+    require_coupon_manager(current_user)
+    
     coupon_service = CouponService(session)
     assigned_coupon = coupon_service.assign_coupon_to_user(coupon_id, user_id)
     
@@ -170,7 +183,7 @@ def assign_coupon(
 @router.post("/redeem", response_model=CouponRead)
 def redeem_coupon(
     coupon_id: int,
-    current_user: CouponUser = Depends(require_user),
+    current_user: CouponUser,
     session: Session = Depends(get_db)
 ):
     """
@@ -178,6 +191,9 @@ def redeem_coupon(
     Regular users can only redeem their own coupons.
     Admins can redeem any coupon.
     """
+    # Check if user has required role
+    require_user(current_user)
+    
     coupon_service = CouponService(session)
     
     # Check if user is admin or trying to redeem their own coupon
@@ -197,12 +213,15 @@ def redeem_coupon(
 @router.delete("/{id}", response_model=bool)
 def delete_coupon(
     id: int,
-    current_user: CouponUser = Depends(require_coupon_admin),
+    current_user: CouponUser,
     session: Session = Depends(get_db)
 ):
     """
     Delete a coupon (admin only).
     """
+    # Check if user has required role
+    require_coupon_admin(current_user)
+    
     coupon_service = CouponService(session)
     success = coupon_service.delete_coupon(id)
     
@@ -215,12 +234,15 @@ def delete_coupon(
 def update_coupon(
     id: int,
     coupon_update: CouponUpdate,
-    current_user: CouponUser = Depends(require_coupon_manager),
+    current_user: CouponUser,
     session: Session = Depends(get_db)
 ):
     """
     Update a coupon (manager/admin only).
     """
+    # Check if user has required role
+    require_coupon_manager(current_user)
+    
     coupon_service = CouponService(session)
     updated_coupon = coupon_service.update_coupon(id, coupon_update)
     

@@ -26,7 +26,7 @@ const UserMenu = () => {
               truncate
             >
               <FaUserAstronaut fontSize="18" />
-              <Text>{user?.full_name || "User"}</Text>
+              <Text>{user?.username || "User"}</Text>
             </Button>
           </MenuTrigger>
 

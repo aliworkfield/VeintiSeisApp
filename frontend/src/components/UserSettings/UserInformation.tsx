@@ -13,7 +13,6 @@ import { type SubmitHandler, useForm } from "react-hook-form"
 
 import {
   type ApiError,
-  type UserPublic,
   type UserUpdateMe,
   UsersService,
 } from "@/client"
@@ -21,6 +20,12 @@ import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { emailPattern, handleError } from "@/utils"
 import { Field } from "../ui/field"
+
+// Define the form type based on CouponUser properties
+interface UserInformationForm {
+  full_name?: string | null;
+  email?: string | null;
+}
 
 const UserInformation = () => {
   const queryClient = useQueryClient()
@@ -33,12 +38,12 @@ const UserInformation = () => {
     reset,
     getValues,
     formState: { isSubmitting, errors, isDirty },
-  } = useForm<UserPublic>({
+  } = useForm<UserInformationForm>({
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
-      full_name: currentUser?.full_name,
-      email: currentUser?.email,
+      full_name: currentUser?.username || "", // Using username as full_name since CouponUser doesn't have full_name
+      email: "", // CouponUser doesn't have email property
     },
   })
 
@@ -60,8 +65,13 @@ const UserInformation = () => {
     },
   })
 
-  const onSubmit: SubmitHandler<UserUpdateMe> = async (data) => {
-    mutation.mutate(data)
+  const onSubmit: SubmitHandler<UserInformationForm> = async (data) => {
+    // Convert the form data to the expected UserUpdateMe type
+    const updateData: UserUpdateMe = {
+      full_name: data.full_name,
+      email: data.email,
+    }
+    mutation.mutate(updateData)
   }
 
   const onCancel = () => {
@@ -80,25 +90,16 @@ const UserInformation = () => {
           as="form"
           onSubmit={handleSubmit(onSubmit)}
         >
-          <Field label="Full name">
-            {editMode ? (
-              <Input
-                {...register("full_name", { maxLength: 30 })}
-                type="text"
-                size="md"
-                w="auto"
-              />
-            ) : (
-              <Text
-                fontSize="md"
-                py={2}
-                color={!currentUser?.full_name ? "gray" : "inherit"}
-                truncate
-                maxWidth="250px"
-              >
-                {currentUser?.full_name || "N/A"}
-              </Text>
-            )}
+          <Field label="Username">
+            <Text
+              fontSize="md"
+              py={2}
+              color={!currentUser?.username ? "gray" : "inherit"}
+              truncate
+              maxWidth="250px"
+            >
+              {currentUser?.username || "N/A"}
+            </Text>
           </Field>
           <Field
             mt={4}
@@ -118,7 +119,7 @@ const UserInformation = () => {
               />
             ) : (
               <Text fontSize="md" py={2} truncate maxWidth="250px">
-                {currentUser?.email}
+                Not available
               </Text>
             )}
           </Field>

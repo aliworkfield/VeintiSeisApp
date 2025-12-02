@@ -11,7 +11,8 @@ import { useState } from "react"
 import { type SubmitHandler, useForm } from "react-hook-form"
 import { FaExchangeAlt } from "react-icons/fa"
 
-import { type ApiError, type ItemPublic, ItemsService } from "@/client"
+import type { ApiError } from "@/client"
+import { ItemsService } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import {
@@ -26,13 +27,22 @@ import {
 } from "../ui/dialog"
 import { Field } from "../ui/field"
 
-interface EditItemProps {
-  item: ItemPublic
+// Define the ItemPublic interface based on the schema
+interface ItemPublic {
+  title: string;
+  description?: string | null;
+  id: string;
+  owner_id: string;
 }
 
+// Define the ItemUpdateForm interface
 interface ItemUpdateForm {
   title: string
   description?: string
+}
+
+interface EditItemProps {
+  item: ItemPublic
 }
 
 const EditItem = ({ item }: EditItemProps) => {

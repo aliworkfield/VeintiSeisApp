@@ -1,50 +1,36 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Box, Heading, Text, Table, Badge } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query'
-import { useState, useEffect } from 'react'
+import { CouponsService } from '@/client'
 
 export const Route = createFileRoute('/_layout/coupons/me')({
   component: MyCoupons,
 })
 
 function MyCoupons() {
-  const [coupons, setCoupons] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchCoupons = async () => {
-      try {
-        const token = localStorage.getItem('access_token')
-        const response = await fetch('/api/v1/coupons/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        })
-        
-        if (response.ok) {
-          const data = await response.json()
-          setCoupons(data)
-        } else {
-          setError('Failed to fetch coupons')
-        }
-      } catch (err) {
-        setError('Error fetching coupons')
-      } finally {
-        setLoading(false)
+  const { data: coupons, isLoading, error } = useQuery({
+    queryKey: ['myCoupons'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token')
+      if (!token) {
+        throw new Error('Not authenticated')
       }
+      return await CouponsService.readMyCoupons({
+        authorization: `Bearer ${token}`
+      })
     }
+  })
 
-    fetchCoupons()
-  }, [])
-
-  if (loading) {
+  if (isLoading) {
     return <Text>Loading coupons...</Text>
   }
 
   if (error) {
-    return <Text color="red.500">{error}</Text>
+    return <Text color="red.500">Error loading coupons: {(error as Error).message}</Text>
+  }
+
+  if (!coupons) {
+    return <Text>No coupons data received</Text>
   }
 
   return (

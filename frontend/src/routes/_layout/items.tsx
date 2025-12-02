@@ -22,6 +22,20 @@ import {
   PaginationRoot,
 } from "@/components/ui/pagination.tsx"
 
+// Define the ItemPublic interface based on the schema
+interface ItemPublic {
+  title: string;
+  description?: string | null;
+  id: string;
+  owner_id: string;
+}
+
+// Define the ItemsPublic interface based on the schema
+interface ItemsPublic {
+  data: ItemPublic[];
+  count: number;
+}
+
 const itemsSearchSchema = z.object({
   page: z.number().catch(1),
 })
@@ -55,8 +69,10 @@ function ItemsTable() {
       search: (prev: { [key: string]: string }) => ({ ...prev, page }),
     })
 
-  const items = data?.data.slice(0, PER_PAGE) ?? []
-  const count = data?.count ?? 0
+  // Fix the data access - ItemsService.readItems returns an object with data and count
+  const itemsPublic = data as unknown as ItemsPublic;
+  const items = itemsPublic?.data?.slice(0, PER_PAGE) ?? []
+  const count = itemsPublic?.count ?? 0
 
   if (isLoading) {
     return <PendingItems />

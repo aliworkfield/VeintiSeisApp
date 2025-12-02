@@ -14,7 +14,7 @@ import {
 import { useState } from "react"
 import { FaExchangeAlt } from "react-icons/fa"
 
-import { type UserPublic, type UserUpdate, UsersService } from "@/client"
+import { type UserOutOld, type UserUpdateOld, UsersService } from "@/client"
 import type { ApiError } from "@/client/core/ApiError"
 import useCustomToast from "@/hooks/useCustomToast"
 import { emailPattern, handleError } from "@/utils"
@@ -30,10 +30,10 @@ import {
 import { Field } from "../ui/field"
 
 interface EditUserProps {
-  user: UserPublic
+  user: UserOutOld
 }
 
-interface UserUpdateForm extends UserUpdate {
+interface UserUpdateForm extends UserUpdateOld {
   confirm_password?: string
 }
 
@@ -55,7 +55,7 @@ const EditUser = ({ user }: EditUserProps) => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: UserUpdateForm) =>
+    mutationFn: (data: UserUpdateOld) =>
       UsersService.updateUser({ userId: user.id, requestBody: data }),
     onSuccess: () => {
       showSuccessToast("User updated successfully.")
@@ -71,10 +71,15 @@ const EditUser = ({ user }: EditUserProps) => {
   })
 
   const onSubmit: SubmitHandler<UserUpdateForm> = async (data) => {
-    if (data.password === "") {
-      data.password = undefined
+    // Remove confirm_password from data before sending to API
+    const { confirm_password, ...userData } = data
+    
+    // Handle empty password
+    if (userData.password === "") {
+      userData.password = undefined
     }
-    mutation.mutate(data)
+    
+    mutation.mutate(userData)
   }
 
   return (
@@ -129,7 +134,6 @@ const EditUser = ({ user }: EditUserProps) => {
               </Field>
 
               <Field
-                required
                 invalid={!!errors.password}
                 errorText={errors.password?.message}
                 label="Set Password"
@@ -148,7 +152,6 @@ const EditUser = ({ user }: EditUserProps) => {
               </Field>
 
               <Field
-                required
                 invalid={!!errors.confirm_password}
                 errorText={errors.confirm_password?.message}
                 label="Confirm Password"

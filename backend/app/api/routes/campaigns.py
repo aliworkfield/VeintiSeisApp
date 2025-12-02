@@ -13,27 +13,33 @@ router = APIRouter(prefix="/campaigns", tags=["campaigns"])
 @router.post("/", response_model=CampaignRead)
 def create_campaign(
     *,
+    current_user: CouponUser,
     session: Session = Depends(get_db),
-    current_user: CouponUser = Depends(require_coupon_admin),
     campaign_in: CampaignCreate
 ):
     """
     Create new campaign (admin only).
     """
+    # Check if user has required role
+    require_coupon_admin(current_user)
+    
     campaign_service = CampaignService(session)
     campaign = campaign_service.create_campaign(campaign_in)
     return campaign
 
 @router.get("/", response_model=List[CampaignRead])
 def read_campaigns(
-    skip: int = 0,
-    limit: int = 100,
+    current_user: CouponUser,
     session: Session = Depends(get_db),
-    current_user: CouponUser = Depends(require_user)
+    skip: int = 0,
+    limit: int = 100
 ):
     """
     Retrieve campaigns (all users).
     """
+    # Check if user has required role
+    require_user(current_user)
+    
     campaign_service = CampaignService(session)
     campaigns = campaign_service.get_campaigns(skip=skip, limit=limit)
     return campaigns
@@ -41,13 +47,16 @@ def read_campaigns(
 @router.get("/{id}", response_model=CampaignRead)
 def read_campaign(
     *,
+    current_user: CouponUser,
     session: Session = Depends(get_db),
-    current_user: CouponUser = Depends(require_user),
     id: int
 ):
     """
     Get campaign by ID (all users).
     """
+    # Check if user has required role
+    require_user(current_user)
+    
     campaign_service = CampaignService(session)
     campaign = campaign_service.get_campaign(id)
     if not campaign:
@@ -57,14 +66,17 @@ def read_campaign(
 @router.put("/{id}", response_model=CampaignRead)
 def update_campaign(
     *,
+    current_user: CouponUser,
     session: Session = Depends(get_db),
-    current_user: CouponUser = Depends(require_coupon_admin),
     id: int,
     campaign_in: CampaignUpdate
 ):
     """
     Update a campaign (admin only).
     """
+    # Check if user has required role
+    require_coupon_admin(current_user)
+    
     campaign_service = CampaignService(session)
     campaign = campaign_service.get_campaign(id)
     if not campaign:
@@ -78,13 +90,16 @@ def update_campaign(
 @router.delete("/{id}", response_model=bool)
 def delete_campaign(
     *,
+    current_user: CouponUser,
     session: Session = Depends(get_db),
-    current_user: CouponUser = Depends(require_coupon_admin),
     id: int
 ):
     """
     Delete a campaign (admin only).
     """
+    # Check if user has required role
+    require_coupon_admin(current_user)
+    
     campaign_service = CampaignService(session)
     success = campaign_service.delete_campaign(id)
     if not success:
@@ -94,8 +109,8 @@ def delete_campaign(
 @router.post("/{campaign_id}/assign/{user_id}", response_model=CouponRead)
 def assign_campaign_to_user(
     *,
+    current_user: CouponUser,
     session: Session = Depends(get_db),
-    current_user: CouponUser = Depends(require_coupon_admin),
     campaign_id: int,
     user_id: int
 ):
@@ -106,6 +121,9 @@ def assign_campaign_to_user(
     - assign 1 coupon per user
     - set assigned_to_user + assigned_at
     """
+    # Check if user has required role
+    require_coupon_admin(current_user)
+    
     assignment_service = AssignmentService(session)
     assigned_coupon = assignment_service.assign_campaign_coupons_to_user(campaign_id, user_id)
     

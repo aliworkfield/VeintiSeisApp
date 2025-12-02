@@ -1,85 +1,67 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Box, Heading, Text, Table, Button, Input } from '@chakra-ui/react'
 import { useQuery } from '@tanstack/react-query'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Field } from '@/components/ui/field'
+import { CouponsService } from '@/client'
 
 export const Route = createFileRoute('/_layout/coupons/unassigned')({
   component: UnassignedCoupons,
 })
 
 function UnassignedCoupons() {
-  const [coupons, setCoupons] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [userId, setUserId] = useState('')
+  const [assignError, setAssignError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchCoupons = async () => {
-      try {
-        const token = localStorage.getItem('access_token')
-        const response = await fetch('/api/v1/coupons/unassigned', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        })
-        
-        if (response.ok) {
-          const data = await response.json()
-          setCoupons(data)
-        } else {
-          setError('Failed to fetch coupons')
-        }
-      } catch (err) {
-        setError('Error fetching coupons')
-      } finally {
-        setLoading(false)
+  const { data: coupons, isLoading, error, refetch } = useQuery({
+    queryKey: ['unassignedCoupons'],
+    queryFn: async () => {
+      const token = localStorage.getItem('access_token')
+      if (!token) {
+        throw new Error('Not authenticated')
       }
+      return await CouponsService.readUnassignedCoupons({
+        authorization: `Bearer ${token}`
+      })
     }
-
-    fetchCoupons()
-  }, [])
+  })
 
   const handleAssignCoupon = async (couponId: number) => {
     if (!userId) {
-      setError('Please enter a user ID')
+      setAssignError('Please enter a user ID')
       return
     }
     
     try {
       const token = localStorage.getItem('access_token')
-      const response = await fetch('/api/v1/coupons/assign', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          coupon_id: couponId,
-          user_id: parseInt(userId)
-        })
+      if (!token) {
+        throw new Error('Not authenticated')
+      }
+      
+      await CouponsService.assignCoupon({
+        couponId,
+        userId: parseInt(userId),
+        authorization: `Bearer ${token}`
       })
       
-      if (response.ok) {
-        // Refresh the coupon list
-        const updatedCoupons = coupons.filter(coupon => coupon.id !== couponId)
-        setCoupons(updatedCoupons)
-      } else {
-        const errorData = await response.json()
-        setError(errorData.detail || 'Failed to assign coupon')
-      }
+      // Refresh the coupon list
+      refetch()
+      setAssignError(null)
     } catch (err) {
-      setError('Error assigning coupon')
+      setAssignError('Error assigning coupon: ' + (err as Error).message)
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return <Text>Loading coupons...</Text>
   }
 
   if (error) {
-    return <Text color="red.500">{error}</Text>
+    return <Text color="red.500">Error loading coupons: {(error as Error).message}</Text>
+  }
+
+  if (!coupons) {
+    return <Text>No coupons data received</Text>
   }
 
   return (
@@ -96,6 +78,10 @@ function UnassignedCoupons() {
           type="number"
         />
       </Field>
+      
+      {assignError && (
+        <Text color="red.500" mb={4}>{assignError}</Text>
+      )}
       
       {coupons.length === 0 ? (
         <Text>There are no unassigned coupons.</Text>

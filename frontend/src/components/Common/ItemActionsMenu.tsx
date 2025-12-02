@@ -2,7 +2,14 @@ import { IconButton } from "@chakra-ui/react"
 import { BsThreeDotsVertical } from "react-icons/bs"
 import { MenuContent, MenuRoot, MenuTrigger } from "../ui/menu"
 
-import type { ItemPublic } from "@/client"
+// Define the ItemPublic interface based on the schema
+interface ItemPublic {
+  title: string;
+  description?: string | null;
+  id: string;
+  owner_id: string;
+}
+
 import DeleteItem from "../Items/DeleteItem"
 import EditItem from "../Items/EditItem"
 
